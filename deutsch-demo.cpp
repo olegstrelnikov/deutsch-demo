@@ -53,6 +53,12 @@ public:
 			data_.emplace_back(u[i], u[i] + N);
 		}
 	}
+	template<typename U = T> matrix(vector<U> const& u) {
+		data_.reserve(u.size());
+		for (size_t i = 0; i < u.size(); ++i) {
+			data_.emplace_back(1, u[i]);
+		}
+	}
 	matrix() : data_() {}
 	constexpr auto height() const {
 		return data_.size();
@@ -117,7 +123,7 @@ bool is_constant(unary f) {
 void test() {
 	std::vector<int> vv{1,2,3};
 	float vvv[] = {5.5f,6.5f};
-	vector<double> v1{{1.0,2.0,3.0,4.0}};
+	vector<double> v1({1.0,2.0,3.0,4.0});
 	vector<long> v2(vv);
 	vector<float> v3(vvv);
 	vector<int> v4{10,11,12,13,14,15};
@@ -130,13 +136,15 @@ void test() {
 	print_vector<int>({5.0f,6.0f}) << "\n";
 	std::vector<std::vector<int>> mm{{1,2,3},{4,5,6}};
 	double mmm[4][5] = {{1,2,3,4,5},{2,3,4,5,6},{3,4,5,6,7},{4,5,6,7,8}};
-	matrix<double> m1({{1.1,2.2},{3.3,4.4},{5.5,6.6}});
+	matrix<double> m1{{1.1,2.2},{3.3,4.4},{5.5,6.6}};
 	matrix<int> m2(mm);
 	m2[1][2] = 3456;
 	matrix<int> m3(mmm);
+	matrix<double> m4(v4);
 	print_matrix(m1) << "\n";
 	print_matrix(m2) << "\n";
 	print_matrix(m3) << "\n";
+	print_matrix(m4) << "\n";
 }
 
 int main() {
