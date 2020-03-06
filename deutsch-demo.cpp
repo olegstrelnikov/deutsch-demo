@@ -17,7 +17,14 @@ public:
 	template<typename Container> vector(Container const& u) : data_(std::begin(u), std::end(u)) {}
 	template<typename U = T> vector(std::initializer_list<U> const& u) : data_(std::begin(u), std::end(u)) {}
 	template<size_t N, typename U = T> vector(U const (&u)[N]) : data_(u, u + N) {}
-	vector() : data_() {}
+
+	vector() = default;
+	vector(vector const&) = default;
+	vector(vector&&) = default;
+	vector& operator=(vector const&) = default;
+	vector& operator=(vector&&) = default;
+	~vector() = default;
+
 	constexpr auto size() const {
 		return data_.size();
 	}
@@ -59,7 +66,13 @@ public:
 			data_.emplace_back(1, u[i]);
 		}
 	}
-	matrix() : data_() {}
+	matrix() = default;
+	matrix(matrix const&) = default;
+	matrix(matrix&&) = default;
+	matrix& operator=(matrix const&) = default;
+	matrix& operator=(matrix&&) = default;
+	~matrix() = default;
+
 	constexpr auto height() const {
 		return data_.size();
 	}
@@ -145,6 +158,9 @@ void test() {
 	print_matrix(m2) << "\n";
 	print_matrix(m3) << "\n";
 	print_matrix(m4) << "\n";
+	print_matrix(matrix<int>({{1,2,3,4,5,6,7,8,9,10}})) << "\n";
+	print_matrix(matrix<int>(std::vector<std::vector<int>>(3))) << "\n";
+	print_matrix(matrix<int>()) << "\n";
 }
 
 int main() {
