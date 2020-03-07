@@ -74,8 +74,28 @@ public:
 	typename std::vector<std::vector<T>>::reference operator[](size_t index) { //todo: return type
 		return data_[index];
 	}
+
+	template<typename R = T, typename U = T> matrix<R> operator*(matrix<U> const& rhs) const {
+		if (width() != rhs.height()) {
+			throw std::runtime_error("matrix dimensions mismatch");
+		}
+		matrix<R> result(height());
+		for (size_t i = 0; i < height(); ++i) {
+			result.data_[i].resize(rhs.width());
+			for (size_t j = 0; j < rhs.width(); ++j) {
+				for (size_t k = 0; k < width(); ++k) {
+					result.data_[i][j] += data_[i][k]*rhs.data_[k][j];
+				}
+			}
+		}
+		return result;
+	}
+
 private:
-	std::vector<std::vector<T>> data_;
+	typedef std::vector<T> vector_type;
+	typedef std::vector<vector_type> matrix_type;
+	matrix(typename matrix_type::size_type h) : data_(h) {}
+	matrix_type data_;
 };
 
 template<typename T, size_t width = 10, char lb = '[', char rb = ']', char sep = ' '>
@@ -95,6 +115,54 @@ std::ostream& print_matrix(matrix<T> const& m) {
 	}
 	return std::cout;
 }
+
+template<typename L, typename R, size_t width = 10, char lb = '[', char rb = ']', char sep = ' '>
+std::ostream& print_matrix_multiplication(matrix<L> const& lhs, matrix<R> const& rhs) {
+	auto const p = lhs*rhs;
+	std::ostream& os = std::cout;
+	auto const l_height = lhs.height();
+	auto const l_width = lhs.width();
+	auto const r_height = rhs.height();
+	auto const r_width = rhs.width();
+	auto const p_height = p.height();
+	auto const p_width = p.width();
+	auto const height = std::max(l_height, std::max(r_height, p_height));
+	if (height > 0) {
+		for (auto i = decltype(height){}; i < height; ++i) {
+			if (l_height > i) {
+				os << lb << sep;
+				for (auto j = decltype(l_width){}; j < l_width; ++j) {
+					os << std::setw(width) << lhs[i][j] << sep;
+				}
+				os << rb;
+			} else {
+				os << std::string(3 + l_width*(width + 1), ' ');
+			}
+			os << sep;
+			if (r_height > i) {
+				os << lb << sep;
+				for (auto j = decltype(r_width){}; j < r_width; ++j) {
+					os << std::setw(width) << rhs[i][j] << sep;
+				}
+				os << rb;
+			} else {
+				os << std::string(3 + r_width*(width + 1), ' ');
+			}
+			os << sep;
+			if (p_height > i) {
+				os << lb << sep;
+				for (auto j = decltype(p_width){}; j < p_width; ++j) {
+					os << std::setw(width) << p[i][j] << sep;
+				}
+				os << rb;
+			}
+			os << "\n";
+		}
+	} else {
+		os << lb << rb << sep << lb << rb << sep << lb << rb << '\n';
+	}
+	return os;
+} //print_matrix_multiplication()
 
 bool f0(bool) {
 	return false;
@@ -148,6 +216,10 @@ void test() {
 	print_matrix(matrix<int>({{1,2,3,4,5,6,7,8,9,10}})) << "\n";
 	print_matrix(matrix<int>(std::vector<std::vector<int>>(3))) << "\n";
 	print_matrix(matrix<int>()) << "\n";
+	print_matrix_multiplication(m1, m5) << "\n";
+	print_matrix_multiplication(m5, m1) << "\n";
+	print_matrix_multiplication(matrix<int>{{1},{2},{3},{4}}, matrix<int>{{1,2,3}}) << "\n";
+	print_matrix_multiplication(matrix<int>{{1,2,3}}, matrix<int>{{1},{2},{3}}) << "\n";
 }
 
 int main() {
