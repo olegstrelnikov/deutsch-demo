@@ -14,6 +14,8 @@
 
 #include "matrix.h"
 
+namespace {
+
 struct PrintedMatrix {
 	std::vector<size_t> widths;
 	std::vector<std::vector<std::string>> cells;
@@ -26,7 +28,7 @@ struct PrintedMatrix {
 };
 
 template<typename T>
-static inline PrintedMatrix get_widths(matrix<T> const& m) {
+inline PrintedMatrix get_widths(matrix<T> const& m) {
 	auto const m_height = m.height();
 	auto const m_width = m.width();
 	PrintedMatrix result(m_height, m_width);
@@ -48,21 +50,34 @@ static inline PrintedMatrix get_widths(matrix<T> const& m) {
 	return result;
 }
 
-template<typename T, char lb = '[', char rb = ']', char sep = ' '> inline std::ostream& print_matrix(matrix<T> const& m) {
-	std::ostream& os = std::cout;
+inline std::ostream& print_cell(std::string const& cell, size_t width, const char* ws, std::ostream& os) {
+	return os.write(ws, width - cell.size()).write(cell.data(), cell.size());
+} //print_cell()
+
+inline std::ostream& print_row(std::vector<std::string> const& row, std::vector<size_t> const& widths,
+	const char* ws, char sep, char lb, char rb, std::ostream& os) {
+	auto const m_width = row.size();
+	os << lb;
+	if (m_width > 0) {
+		print_cell(row[0], widths[0], ws, os);
+		for (auto j = decltype(m_width){1}; j < m_width; ++j) {
+			print_cell(row[j], widths[j], ws, os.put(sep));
+		}
+	}
+	return os << rb;
+} //print_row()
+
+}
+
+template<typename T>
+inline std::ostream& print_matrix(matrix<T> const& m, char sep = ' ', char lb = '[', char rb = ']', std::ostream& os = std::cout) {
 	auto r = get_widths(m);
 	auto const m_height = m.height();
-	auto const m_width = m.width();
 	const std::string ws(r.max_width, ' ');
 	if (m_height > 0) {
 		for (auto i = decltype(m_height){}; i < m_height; ++i) {
-			os << lb << sep;
-			auto& row = r.cells[i];
-			for (auto j = decltype(m_width){}; j < m_width; ++j) {
-				auto& cell = row[j];
-				os.write(ws.data(), r.widths[j] - cell.size()).write(cell.data(), cell.size()) << sep;
-			}
-			os << rb << '\n';
+			print_row(r.cells[i], r.widths, ws.data(), sep, lb, rb, os);
+			os << '\n';
 		}
 	} else {
 		os << lb << rb << '\n';
@@ -70,9 +85,10 @@ template<typename T, char lb = '[', char rb = ']', char sep = ' '> inline std::o
 	return os;
 }
 
-template<typename Container, char lb = '[', char rb = ']', char sep = ' '> inline std::ostream& print_vector(Container const& v) {
-	return print_matrix(matrix<typename std::iterator_traits<decltype(std::begin(v))>::value_type>(v));
-}
+template<typename V>
+inline std::ostream& print_vector(V const& v, char sep = ' ', char lb = '[', char rb = ']', std::ostream& os = std::cout) {
+	return print_matrix(matrix<typename std::iterator_traits<decltype(std::begin(v))>::value_type>(v), sep, lb, rb, os);
+} //print_vector()
 
 template<typename L, typename R, size_t width = 10, char lb = '[', char rb = ']', char sep = ' '>
 inline std::ostream& print_matrix_multiplication(matrix<L> const& lhs, matrix<R> const& rhs) {
