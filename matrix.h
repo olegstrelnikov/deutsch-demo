@@ -41,6 +41,12 @@ public:
 			data_.emplace_back(1, u[i]);
 		}
 	}
+	template<size_t N, typename U, typename Is<U>::Scalar = 0> matrix(U const (&u)[N]) {
+		data_.reserve(N);
+		for (size_t i = 0; i < N; ++i) {
+			data_.emplace_back(1, u[i]);
+		}
+	}
 	matrix() = default;
 	matrix(matrix const&) = default;
 	matrix(matrix&&) = default;
