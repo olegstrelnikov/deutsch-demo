@@ -12,34 +12,8 @@
 #include <iterator>
 #include <iomanip>
 
-template<typename T> class vector {
-public:
-	template<typename Container> vector(Container const& u) : data_(std::begin(u), std::end(u)) {}
-	template<typename U = T> vector(std::initializer_list<U> const& u) : data_(std::begin(u), std::end(u)) {}
-	template<size_t N, typename U = T> vector(U const (&u)[N]) : data_(u, u + N) {}
-
-	vector() = default;
-	vector(vector const&) = default;
-	vector(vector&&) = default;
-	vector& operator=(vector const&) = default;
-	vector& operator=(vector&&) = default;
-	~vector() = default;
-
-	constexpr auto size() const {
-		return data_.size();
-	}
-	constexpr auto operator[](size_t index) const {
-		return data_[index];
-	}
-	typename std::vector<T>::reference operator[](size_t index) { //todo: return type
-		return data_[index];
-	}
-private:
-	std::vector<T> data_;
-};
-
-template<typename T, size_t width = 10, char lb = '[', char rb = ']'> std::ostream& print_vector(vector<T> const& v) {
-	auto const v_size = v.size();
+template<typename Container, size_t width = 10, char lb = '[', char rb = ']'> std::ostream& print_vector(Container const& v) {
+	auto const v_size = std::size(v);
 	if (v_size > 0) {
 		for (auto i = decltype(v_size){}; i < v_size; ++i) {
 			std::cout << lb << std::setw(width) << v[i] << rb << '\n';
@@ -51,8 +25,23 @@ template<typename T, size_t width = 10, char lb = '[', char rb = ']'> std::ostre
 }
 
 template<typename T> class matrix {
+
+	struct IsScalar {
+		typedef int Scalar;
+	};
+	struct IsVector {
+		typedef int Vector;
+	};
+	template<typename V> struct Is : IsScalar {};
+	template<typename V, typename A> struct Is<std::vector<V, A>> : IsVector {};
+
 public:
-	template<typename Container> matrix(Container const& u) : data_(std::begin(u), std::end(u)) {}
+	template<typename Container, typename Is<typename Container::value_type>::Vector = 0> matrix(Container const& u) {
+		data_.reserve(u.size());
+		for (auto const& c: u) {
+			data_.emplace_back(std::begin(c), std::end(c));
+		}
+	}
 	template<typename U = T> matrix(std::initializer_list<std::initializer_list<U>> const& u) : data_(std::begin(u), std::end(u)) {}
 	template<size_t M, size_t N, typename U = T> matrix(U const (&u)[M][N]) {
 		data_.reserve(M);
@@ -60,7 +49,7 @@ public:
 			data_.emplace_back(u[i], u[i] + N);
 		}
 	}
-	template<typename U = T> matrix(vector<U> const& u) {
+	template<typename Container, typename Is<typename Container::value_type>::Scalar = 0> matrix(Container const& u) {
 		data_.reserve(u.size());
 		for (size_t i = 0; i < u.size(); ++i) {
 			data_.emplace_back(1, u[i]);
@@ -82,7 +71,7 @@ public:
 	constexpr auto operator[](size_t index) const {
 		return data_[index];
 	}
-	typename std::vector<std::vector<T>>::reference operator[](size_t index) {
+	typename std::vector<std::vector<T>>::reference operator[](size_t index) { //todo: return type
 		return data_[index];
 	}
 private:
@@ -134,26 +123,24 @@ bool is_constant(unary f) {
 }
 
 void test() {
+	std::vector<double> v({1.0,2.0,3.0,4.0});
 	std::vector<int> vv{1,2,3};
 	float vvv[] = {5.5f,6.5f};
-	vector<double> v1({1.0,2.0,3.0,4.0});
-	vector<long> v2(vv);
-	vector<float> v3(vvv);
-	vector<int> v4{10,11,12,13,14,15};
-	print_vector(v1) << "\n";
-	print_vector(v2) << "\n";
-	print_vector(v3) << "\n";
-	v4[0] = 25;
-	print_vector(v4) << "\n";
-	print_vector(vector<char>()) << "\n";
-	print_vector<int>({5.0f,6.0f}) << "\n";
+	std::vector<int> v4{10,11,12,13,14,15};
+	print_vector(v) << "\n";
+	print_vector(vv) << "\n";
+	print_vector(vvv) << "\n";
+	print_vector(std::vector<char>()) << "\n";
+	print_vector<std::vector<float>>({5.0f,6.0f}) << "\n";
 	std::vector<std::vector<int>> mm{{1,2,3},{4,5,6}};
 	double mmm[4][5] = {{1,2,3,4,5},{2,3,4,5,6},{3,4,5,6,7},{4,5,6,7,8}};
+	std::vector<std::vector<int>> mmmmm{{1,2,3},{4,5,6}};
 	matrix<double> m1{{1.1,2.2},{3.3,4.4},{5.5,6.6}};
 	matrix<int> m2(mm);
 	m2[1][2] = 3456;
 	matrix<int> m3(mmm);
 	matrix<double> m4(v4);
+	matrix<double> m5(mmmmm);
 	print_matrix(m1) << "\n";
 	print_matrix(m2) << "\n";
 	print_matrix(m3) << "\n";
