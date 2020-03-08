@@ -11,6 +11,8 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <algorithm>
+#include <numeric>
 
 #include "matrix.h"
 
@@ -20,7 +22,9 @@ struct PrintedMatrix {
 	std::vector<size_t> widths;
 	std::vector<std::vector<std::string>> cells;
 	size_t max_width;
-	PrintedMatrix(size_t height, size_t width) : widths(width), cells(height), max_width() {
+	char trailer;
+	PrintedMatrix(size_t height, size_t width, char t) :
+		widths(width), cells(height ? height : 1), max_width(width > 0 ? width + 1 : 2), trailer(t) {
 		for (auto& row: cells) {
 			row.reserve(width);
 		}
@@ -28,10 +32,10 @@ struct PrintedMatrix {
 };
 
 template<typename T>
-inline PrintedMatrix get_widths(matrix<T> const& m) {
+inline PrintedMatrix get_widths(matrix<T> const& m, char trailer = ' ') {
 	auto const m_height = m.height();
 	auto const m_width = m.width();
-	PrintedMatrix result(m_height, m_width);
+	PrintedMatrix result(m_height, m_width, trailer);
 	std::ostringstream oss;
 	size_t size;
 	for (auto i = decltype(m_height){}; i < m_height; ++i) {
@@ -40,10 +44,9 @@ inline PrintedMatrix get_widths(matrix<T> const& m) {
 			oss << m[i][j];
 			size = result.cells[i].emplace_back(oss.str()).size();
 			if (size > result.widths[j]) {
+				result.max_width -= result.widths[j];
 				result.widths[j] = size;
-				if (size > result.max_width) {
-					result.max_width = size;
-				}
+				result.max_width += size;
 			}
 		}
 	}
@@ -67,75 +70,48 @@ inline std::ostream& print_row(std::vector<std::string> const& row, std::vector<
 	return os << rb;
 } //print_row()
 
+inline std::ostream& print_rows(std::vector<PrintedMatrix> const& r, size_t i, const char* ws, char sep, char lb, char rb, char msep, std::ostream& os) {
+	for (auto const& rr: r) {
+		if (rr.cells.size() > i) {
+			print_row(rr.cells[i], rr.widths, ws, sep, lb, rb, os);
+		} else {
+			os.write(ws, rr.max_width);
+		}
+		os << msep; //todo: trailing msep
+	}
+	return os << '\n';
 }
+
+inline std::ostream& print_matrices(std::vector<PrintedMatrix> const& r, char sep, char lb, char rb, char msep, std::ostream& os) {
+	auto const m_height = std::max_element(r.begin(), r.end(), [](auto const& lhs, auto const& rhs){return lhs.cells.size() < rhs.cells.size();})->cells.size();
+	const std::string ws(std::max_element(r.begin(), r.end(), [](auto const& lhs, auto const& rhs){return lhs.max_width < rhs.max_width;})->max_width, ' ');
+	for (auto const& rr: r) {
+		print_row(rr.cells[0], rr.widths, ws.data(), sep, lb, rb, os);
+		os << rr.trailer; //todo: trailing msep
+	}
+	os << '\n';
+	for (auto i = decltype(m_height){1}; i < m_height; ++i) {
+		print_rows(r, i, ws.data(), sep, lb, rb, msep, os);
+	}
+	return os;
+} //print_matrices()
+
+} //namespace
 
 template<typename T>
 inline std::ostream& print_matrix(matrix<T> const& m, char sep = ' ', char lb = '[', char rb = ']', std::ostream& os = std::cout) {
-	auto r = get_widths(m);
-	auto const m_height = m.height();
-	const std::string ws(r.max_width, ' ');
-	if (m_height > 0) {
-		for (auto i = decltype(m_height){}; i < m_height; ++i) {
-			print_row(r.cells[i], r.widths, ws.data(), sep, lb, rb, os);
-			os << '\n';
-		}
-	} else {
-		os << lb << rb << '\n';
-	}
-	return os;
-}
+	return print_matrices(std::vector<PrintedMatrix>(1, get_widths(m)), sep, lb, rb, ' ', os);
+} //print_matrix()
 
 template<typename V>
-inline std::ostream& print_vector(V const& v, char sep = ' ', char lb = '[', char rb = ']', std::ostream& os = std::cout) {
-	return print_matrix(matrix<typename std::iterator_traits<decltype(std::begin(v))>::value_type>(v), sep, lb, rb, os);
+inline std::ostream& print_vector(V const& v, char lb = '[', char rb = ']', std::ostream& os = std::cout) {
+	return print_matrix(matrix<typename std::iterator_traits<decltype(std::begin(v))>::value_type>(v), '!', lb, rb, os);
 } //print_vector()
 
-template<typename L, typename R, size_t width = 10, char lb = '[', char rb = ']', char sep = ' '>
-inline std::ostream& print_matrix_multiplication(matrix<L> const& lhs, matrix<R> const& rhs) {
-	auto const p = lhs*rhs;
-	std::ostream& os = std::cout;
-	auto const l_height = lhs.height();
-	auto const l_width = lhs.width();
-	auto const r_height = rhs.height();
-	auto const r_width = rhs.width();
-	auto const p_height = p.height();
-	auto const p_width = p.width();
-	auto const height = std::max(l_height, std::max(r_height, p_height));
-	if (height > 0) {
-		for (auto i = decltype(height){}; i < height; ++i) {
-			if (l_height > i) {
-				os << lb << sep;
-				for (auto j = decltype(l_width){}; j < l_width; ++j) {
-					os << std::setw(width) << lhs[i][j] << sep;
-				}
-				os << rb;
-			} else {
-				os << std::string(3 + l_width*(width + 1), ' ');
-			}
-			os << sep;
-			if (r_height > i) {
-				os << lb << sep;
-				for (auto j = decltype(r_width){}; j < r_width; ++j) {
-					os << std::setw(width) << rhs[i][j] << sep;
-				}
-				os << rb;
-			} else {
-				os << std::string(3 + r_width*(width + 1), ' ');
-			}
-			os << sep;
-			if (p_height > i) {
-				os << lb << sep;
-				for (auto j = decltype(p_width){}; j < p_width; ++j) {
-					os << std::setw(width) << p[i][j] << sep;
-				}
-				os << rb;
-			}
-			os << "\n";
-		}
-	} else {
-		os << lb << rb << sep << lb << rb << sep << lb << rb << '\n';
-	}
-	return os;
+template<typename L, typename R>
+inline std::ostream& print_matrix_multiplication(matrix<L> const& lhs, matrix<R> const& rhs,
+	char sep = ' ', char lb = '[', char rb = ']', char msep = ' ', std::ostream& os = std::cout) {
+	return print_matrices({get_widths(lhs, '*'), get_widths(rhs, '='), get_widths(lhs*rhs)}, sep, lb, rb, ' ', os);
 } //print_matrix_multiplication()
 
 #endif /* MATRIX_PRINT_H_ */
