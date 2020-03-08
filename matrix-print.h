@@ -17,6 +17,15 @@
 
 #include "matrix.h"
 
+static const char CHAR_SPACE = ' ';
+static const char CHAR_NEW_LINE = '\n';
+static const char CHAR_LEFT_BRACKET = '[';
+static const char CHAR_RIGHT_BRACKET = ']';
+static const char CHAR_EQUAL = '=';
+static const char CHAR_ASTERISK = '*';
+static const char CHAR_QUESTION = '?';
+static const char CHAR_EXCLAMATION = '!';
+
 namespace {
 
 struct RenderedMatrix {
@@ -73,6 +82,7 @@ inline std::ostream& print_row(std::vector<std::string> const& row, std::vector<
 
 
 inline std::ostream& print_row(RenderedMatrix const& rr, size_t row_number, const char* ws, char sep, char lb, char rb, char msep, std::ostream& os) {
+	assert(rr.cells.size() > 0);
 	if (rr.cells.size() > row_number) {
 		print_row(rr.cells[row_number], rr.widths, ws, sep, lb, rb, os);
 	} else {
